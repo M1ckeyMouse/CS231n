@@ -46,15 +46,6 @@ def svm_loss_naive(W, X, y, reg):
   # Add regularization to the loss.
   loss += reg * np.sum(W * W)
   dW += reg * 2 * W
-  #############################################################################
-  # TODO:                                                                     #
-  # Compute the gradient of the loss function and store it dW.                #
-  # Rather that first computing the loss and then computing the derivative,   #
-  # it may be simpler to compute the derivative at the same time that the     #
-  # loss is being computed. As a result you may need to modify some of the    #
-  # code above to compute the gradient.                                       #
-  #############################################################################
-
 
   return loss, dW
 
@@ -68,15 +59,17 @@ def svm_loss_vectorized(W, X, y, reg):
   loss = 0.0
   dW = np.zeros(W.shape) # initialize the gradient as zero
 
-  #############################################################################
-  # TODO:                                                                     #
-  # Implement a vectorized version of the structured SVM loss, storing the    #
-  # result in loss.                                                           #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  num_train = X.shape[0]
+  num_classes = W.shape[1]
+
+  correct_class_scores = np.diagonal(np.dot(X, W[:, y])).reshape(-1, 1)
+
+  loss_matrix = np.dot(X, W) - np.dot(correct_class_scores, np.ones((1, num_classes))) + np.ones((num_train, num_classes)) # note delta = 1
+  loss_matrix[loss_matrix < 0] = 0
+  loss_matrix /= num_train 
+  loss = np.sum(loss_matrix) - 1 # note changing loss function min value by delta to 0
+
+  loss += reg * np.sum(W * W)
 
 
   #############################################################################
