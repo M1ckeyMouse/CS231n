@@ -59,7 +59,6 @@ def svm_loss_vectorized(W, X, y, reg):
   loss = 0.0
   dW = np.zeros(W.shape) # initialize the gradient as zero
   num_train = X.shape[0]
-  num_classes = W.shape[1]
 
   scores = np.dot(X, W)
   yi_scores = scores[np.arange(num_train), y].reshape(-1, 1)
