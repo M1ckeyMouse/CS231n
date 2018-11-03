@@ -68,6 +68,15 @@ def svm_loss_vectorized(W, X, y, reg):
   margins[np.arange(num_train), y] = 0
   loss = np.mean(np.sum(margins, axis=1))
   loss += reg * np.sum(W * W)
-  #dW = np.dot(X.T, np.ones((num_train, num_classes)))
+
+
+  binary = margins
+  binary[binary > 0] = 1
+  row_sum = np.sum(binary, axis=1)
+  binary[np.arange(num_train), y] = -row_sum.T
+  dW = np.dot(X.T, binary)
+
+  dW /= num_train
+  dW += reg * 2 * W
 
   return loss, dW
