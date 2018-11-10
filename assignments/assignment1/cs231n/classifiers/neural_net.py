@@ -118,7 +118,7 @@ class TwoLayerNet(object):
     dL_dh5 = dL_dh4
     
     grads['W1'] = np.dot(X.T, dL_dh5) + reg * 2 * W1
-    
+
     return loss, grads
 
   def train(self, X, y, X_val, y_val,
@@ -151,34 +151,17 @@ class TwoLayerNet(object):
     val_acc_history = []
 
     for it in range(num_iters):
-      X_batch = None
-      y_batch = None
-
-      
-      #########################################################################
-      # TODO: Create a random minibatch of training data and labels, storing  #
-      # them in X_batch and y_batch respectively.                             #
-      #########################################################################
-      pass
-      #########################################################################
-      #                             END OF YOUR CODE                          #
-      #########################################################################
+      batch_indices = np.random.choice(np.arange(num_train), batch_size)
+      X_batch = X[batch_indices]
+      y_batch = y[batch_indices]
 
       # Compute loss and gradients using the current minibatch
       loss, grads = self.loss(X_batch, y=y_batch, reg=reg)
       loss_history.append(loss)
 
-      #########################################################################
-      # TODO: Use the gradients in the grads dictionary to update the         #
-      # parameters of the network (stored in the dictionary self.params)      #
-      # using stochastic gradient descent. You'll need to use the gradients   #
-      # stored in the grads dictionary defined above.                         #
-      #########################################################################
-      pass
-      #########################################################################
-      #                             END OF YOUR CODE                          #
-      #########################################################################
-
+      for key in self.params.keys():
+        self.params[key] -= grads[key] * learning_rate
+            
       if verbose and it % 100 == 0:
         print('iteration %d / %d: loss %f' % (it, num_iters, loss))
 
@@ -216,14 +199,12 @@ class TwoLayerNet(object):
     """
     y_pred = None
 
-    ###########################################################################
-    # TODO: Implement this function; it should be VERY simple!                #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                              END OF YOUR CODE                           #
-    ###########################################################################
+    h = np.dot(X, self.params['W1']) + self.params['b1']
+    relu_h = h.copy()
+    relu_h[relu_h < 0] = 0
+    scores = np.dot(relu_h, self.params['W2']) + self.params['b2']
 
+    y_pred = np.argmax(scores, axis=1)
     return y_pred
 
 
