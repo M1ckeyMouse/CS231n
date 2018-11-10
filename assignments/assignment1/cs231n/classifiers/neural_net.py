@@ -72,8 +72,11 @@ class TwoLayerNet(object):
     scores = None
 
     h = np.dot(X, W1) + b1
-    h[h < 0] = 0
-    scores = np.dot(h, W2) + b2
+
+    relu_h = h.copy()
+    relu_h[relu_h < 0] = 0
+
+    scores = np.dot(relu_h, W2) + b2
     
     # If the targets are not given then jump out, we're done
     if y is None:
@@ -88,20 +91,34 @@ class TwoLayerNet(object):
     loss_vector = -np.log(exp_scores[np.arange(N), y] / exp_scores_sum) 
     loss = np.mean(loss_vector)
 
-    loss += reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+    loss += reg * (np.sum(W1 * W1) + np.sum(b1 * b1) + np.sum(W2 * W2) + np.sum(b2 * b2))
 
     # Backward pass: compute gradients
-    grads = {}
-    #############################################################################
-    # TODO: Compute the backward pass, computing the derivatives of the weights #
-    # and biases. Store the results in the grads dictionary. For example,       #
-    # grads['W1'] should store the gradient on W1, and be a matrix of same size #
-    #############################################################################
-    pass
-    #############################################################################
-    #                              END OF YOUR CODE                             #
-    #############################################################################
+    grads = {'W1': [], 'b1': [], 'W2': [], 'b2': []}
 
+
+    dL_dLi = 1 / N
+
+    coefs = exp_scores / exp_scores_sum.reshape(-1, 1)
+    new_coefs = coefs.copy()
+    new_coefs[np.arange(N), y] -= 1 
+    
+    dLi_dh1 = new_coefs
+    dL_dh1 = dL_dLi * dLi_dh1
+
+    grads['b2'] = np.sum(dL_dh1, axis=0) + reg * 2 * b2 
+    dL_dh2 = dL_dh1
+    
+    grads['W2'] = np.dot(relu_h.T, dL_dh2) + reg * 2 * W2 
+    dL_dh3 = np.dot(dL_dh2, W2.T)
+    dL_dh4 = dL_dh3.copy()
+    dL_dh4[relu_h <= 0] = 0
+
+    grads['b1'] = np.sum(dL_dh4, axis=0) + reg * 2 * b1 
+    dL_dh5 = dL_dh4
+    
+    grads['W1'] = np.dot(X.T, dL_dh5) + reg * 2 * W1
+    
     return loss, grads
 
   def train(self, X, y, X_val, y_val,
@@ -137,6 +154,7 @@ class TwoLayerNet(object):
       X_batch = None
       y_batch = None
 
+      
       #########################################################################
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
