@@ -62,8 +62,6 @@ def affine_backward(dout, cache):
     dw = np.dot(x.reshape(N, -1).T, dout)
     dx = np.dot(dout, w.T).reshape(x.shape)
 
-
-
     return dx, dw, db
 
 
@@ -83,9 +81,11 @@ def relu_forward(x):
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    relu_x = x.copy()
+    relu_x[relu_x < 0] = 0
+
+    out = relu_x
+
     cache = x
     return out, cache
 
@@ -106,9 +106,9 @@ def relu_backward(dout, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dout[x < 0] = 0
+    dx = dout
+
     return dx
 
 
