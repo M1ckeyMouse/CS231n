@@ -107,9 +107,9 @@ class TwoLayerNet(object):
                                   np.sum(self.params['W2'] * self.params['W2']))
 
         grads = {
-            'W1': affine_relu_backward(affine_backward(dscores, l2_cache)[0], l1_cache)[1],
+            'W1': affine_relu_backward(affine_backward(dscores, l2_cache)[0], l1_cache)[1] + self.reg * self.params['W1'],
             'b1': affine_relu_backward(affine_backward(dscores, l2_cache)[0], l1_cache)[2],
-            'W2': affine_backward(dscores, l2_cache)[1],
+            'W2': affine_backward(dscores, l2_cache)[1]+ self.reg * self.params['W2'],
             'b2': affine_backward(dscores, l2_cache)[2]
         }
         return loss, grads
