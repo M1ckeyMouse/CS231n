@@ -138,7 +138,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     Input:
     - x: Data of shape (N, D)
     - gamma: Scale parameter of shape (D,)
-    - beta: Shift paremeter of shape (D,)
+    - beta: Shift parameter of shape (D,)
     - bn_param: Dictionary with the following keys:
       - mode: 'train' or 'test'; required
       - eps: Constant for numeric stability
@@ -182,9 +182,27 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # might prove to be helpful.                                          #
         #######################################################################
         pass
-        #######################################################################
-        #                           END OF YOUR CODE                          #
-        #######################################################################
+        sample_mean = np.mean(x, axis=0)
+        sample_var = np.var(x, axis=0)
+
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
+
+        xhat = (x - sample_mean) / np.sqrt(sample_var + eps)
+
+        out = gamma * xhat + beta
+
+        cache = {
+            'xhat': xhat,
+            'xmu': x - sample_mean,
+            'sample_mean': sample_mean,
+            'sample_var': sample_var,
+            'ivar': 1. / np.sqrt(sample_var + eps),
+            'sqrtvar': np.sqrt(sample_var + eps),
+            'gamma': gamma,
+            'eps': eps
+        }
+
     elif mode == 'test':
         #######################################################################
         # TODO: Implement the test-time forward pass for batch normalization. #
@@ -193,9 +211,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Store the result in the out variable.                               #
         #######################################################################
         pass
-        #######################################################################
-        #                          END OF YOUR CODE                           #
-        #######################################################################
+        xhat = (x - running_mean) / np.sqrt(running_var + eps)
+
+        out = gamma * xhat + beta
     else:
         raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
@@ -231,9 +249,52 @@ def batchnorm_backward(dout, cache):
     # might prove to be helpful.                                              #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # unfold the variables stored in cache
+    xhat = cache['xhat']
+    xmu = cache['xmu']
+    sample_mean = cache['sample_mean']
+    sample_var = cache['sample_var']
+    ivar = cache['ivar']
+    sqrtvar = cache['sqrtvar']
+    gamma = cache['gamma']
+    eps = cache['eps']
+
+    # get the dimensions of the input/output
+    N, D = dout.shape
+
+    # step9
+    dbeta = np.sum(dout, axis=0)
+    dgammax = dout  # not necessary, but more understandable
+
+    # step8
+    dgamma = np.sum(dgammax * xhat, axis=0)
+    dxhat = dgammax * gamma
+
+    # step7
+    divar = np.sum(dxhat * xmu, axis=0)
+    dxmu1 = dxhat * ivar
+
+    # step6
+    dsqrtvar = -1. / (sqrtvar ** 2) * divar
+
+    # step5
+    dvar = 0.5 * 1. / np.sqrt(sample_var + eps) * dsqrtvar
+
+    # step4
+    dsq = 1. / N * np.ones((N, D)) * dvar
+
+    # step3
+    dxmu2 = 2 * xmu * dsq
+
+    # step2
+    dx1 = (dxmu1 + dxmu2)
+    dmu = -1 * np.sum(dxmu1 + dxmu2, axis=0)
+
+    # step1
+    dx2 = 1. / N * np.ones((N, D)) * dmu
+
+    # step0
+    dx = dx1 + dx2
 
     return dx, dgamma, dbeta
 
@@ -630,7 +691,7 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     - cache: Values needed for the backward pass
     """
     out, cache = None, None
-    eps = gn_param.get('eps',1e-5)
+    eps = gn_param.get('eps', 1e-5)
     ###########################################################################
     # TODO: Implement the forward pass for spatial group normalization.       #
     # This will be extremely similar to the layer norm implementation.        #
