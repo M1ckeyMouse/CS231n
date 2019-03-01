@@ -181,6 +181,12 @@ class FullyConnectedNet(object):
                 'W' + str(layer + 1): np.random.normal(0, weight_scale, (layers_dims[layer], layers_dims[layer + 1])),
                 'b' + str(layer + 1): np.zeros(layers_dims[layer + 1])
             })
+        if self.normalization == 'batchnorm':
+            for layer in range(0, self.num_layers - 1):
+                self.params.update({
+                    'gamma' + str(layer + 1): np.ones(layers_dims[layer]),
+                    'beta' + str(layer + 1): np.zeros(layers_dims[layer])
+                })
 
         # When using dropout we need to pass a dropout_param dictionary to each
         # dropout layer so that the layer knows the dropout probability and the mode
@@ -237,9 +243,16 @@ class FullyConnectedNet(object):
         ############################################################################
         pass
         caches = {}
+        batch_caches = {}
         H = X
 
         for layer in range(1, self.num_layers):
+            if self.normalization == 'batchnorm':
+                H, batch_cache = batchnorm_forward(H, self.params['gamma' + str(layer)],
+                                                   self.params['beta' + str(layer)],
+                                                   self.bn_params[layer - 1])
+                batch_caches.update({layer: batch_cache})
+
             H, cache = affine_relu_forward(H, self.params['W' + str(layer)], self.params['b' + str(layer)])
             caches.update({layer: cache})
 
@@ -284,5 +297,12 @@ class FullyConnectedNet(object):
                 'b' + str(layer): affine_relu_backward(dH, caches[layer])[2]
             })
             dH = affine_relu_backward(dH, caches[layer])[0]
+
+            if (self.normalization == 'batchnorm'):
+                dH, dgamma, dbeta = batchnorm_backward_alt(dH, batch_caches[layer])
+                grads.update({
+                    'gamma' + str(layer): dgamma,
+                    'beta' + str(layer): dbeta
+                })
 
         return loss, grads
