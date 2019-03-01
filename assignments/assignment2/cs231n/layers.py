@@ -373,6 +373,7 @@ def layernorm_forward(x, gamma, beta, ln_param):
     """
     out, cache = None, None
     eps = ln_param.get('eps', 1e-5)
+
     ###########################################################################
     # TODO: Implement the training-time forward pass for layer norm.          #
     # Normalize the incoming data, and scale and  shift the normalized data   #
@@ -384,9 +385,27 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    x = x.reshape(x.shape[0], -1)
+    x = x.T
+
+    sample_mean = np.mean(x, axis=0)
+    sample_var = np.var(x, axis=0)
+
+    xhat = (x - sample_mean) / np.sqrt(sample_var + eps)
+    xhat = xhat.T
+
+    out = gamma * xhat + beta
+
+    cache = {
+        'xhat': xhat,
+        'xmu': x - sample_mean,
+        'sample_mean': sample_mean,
+        'sample_var': sample_var,
+        'ivar': 1. / np.sqrt(sample_var + eps),
+        'sqrtvar': np.sqrt(sample_var + eps),
+        'gamma': gamma,
+        'eps': eps
+    }
     return out, cache
 
 
@@ -415,9 +434,32 @@ def layernorm_backward(dout, cache):
     # still apply!                                                            #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # unfold the variables stored in cache
+    xhat = cache['xhat']
+    gamma = cache['gamma']
+    ivar = cache['ivar']
+    xmu = cache['xmu']
+    sqrtvar = cache['sqrtvar']
+
+    # get the dimensions of the input/output
+    N, D = dout.shape
+
+    # step3
+    dbeta = np.sum(dout, axis=0)
+    dgammax = dout  # not necessary, but more understandable
+
+    # step2
+    dgamma = np.sum(dout * xhat, axis=0)
+    dxhat = dout * gamma
+
+    xhat = xhat.T
+    dxhat = dxhat.T
+
+    # step1
+    dx = (1. / D) * ivar * (D * dxhat - np.sum(dxhat, axis=0)
+                            - xhat * np.sum(dxhat * xhat, axis=0))
+
+    dx = dx.T
     return dx, dgamma, dbeta
 
 

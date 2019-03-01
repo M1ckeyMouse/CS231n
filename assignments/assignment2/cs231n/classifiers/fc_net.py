@@ -181,7 +181,7 @@ class FullyConnectedNet(object):
                 'W' + str(layer + 1): np.random.normal(0, weight_scale, (layers_dims[layer], layers_dims[layer + 1])),
                 'b' + str(layer + 1): np.zeros(layers_dims[layer + 1])
             })
-        if self.normalization == 'batchnorm':
+        if self.normalization == 'batchnorm' or self.normalization == 'layernorm':
             for layer in range(0, self.num_layers - 1):
                 self.params.update({
                     'gamma' + str(layer + 1): np.ones(layers_dims[layer]),
@@ -244,6 +244,7 @@ class FullyConnectedNet(object):
         pass
         caches = {}
         batch_caches = {}
+        layer_caches = {}
         H = X
 
         for layer in range(1, self.num_layers):
@@ -252,6 +253,12 @@ class FullyConnectedNet(object):
                                                    self.params['beta' + str(layer)],
                                                    self.bn_params[layer - 1])
                 batch_caches.update({layer: batch_cache})
+
+            if self.normalization == 'layernorm':
+                H, layer_cache = layernorm_forward(H, self.params['gamma' + str(layer)],
+                                                   self.params['beta' + str(layer)],
+                                                   self.bn_params[layer - 1])
+                layer_caches.update({layer: layer_cache})
 
             H, cache = affine_relu_forward(H, self.params['W' + str(layer)], self.params['b' + str(layer)])
             caches.update({layer: cache})
@@ -300,6 +307,13 @@ class FullyConnectedNet(object):
 
             if (self.normalization == 'batchnorm'):
                 dH, dgamma, dbeta = batchnorm_backward_alt(dH, batch_caches[layer])
+                grads.update({
+                    'gamma' + str(layer): dgamma,
+                    'beta' + str(layer): dbeta
+                })
+
+            if (self.normalization == 'layernorm'):
+                dH, dgamma, dbeta = layernorm_backward(dH, layer_caches[layer])
                 grads.update({
                     'gamma' + str(layer): dgamma,
                     'beta' + str(layer): dbeta
