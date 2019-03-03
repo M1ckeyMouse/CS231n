@@ -614,14 +614,53 @@ def conv_backward_naive(dout, cache):
     - dw: Gradient with respect to w
     - db: Gradient with respect to b
     """
-    dx, dw, db = None, None, None
+    dx, dw, db = [], [], []
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    x, w, b, conv_param = cache
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+
+    N, F, oH, oW = dout.shape
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+
+    px = np.zeros((N, C, H + 2 * pad, W + 2 * pad))
+    pN, pC, pH, pW = px.shape
+    for i in range(N):
+        for c in range(C):
+            px[i, c] = np.pad(x[i, c], pad, 'constant')
+
+    for f in range(F):
+        db = np.append(db, np.sum(dout[:, f, :, :]))
+
+    for f in range(F):
+        df = np.zeros((1, *w.shape[1:]))
+        for h in range(0, pH - HH + 1, stride):
+            for j in range(0, pW - WW + 1, stride):
+                for i in range(N):
+                    df += px[i, :, h:(h + HH), j:(j + WW)] * dout[i, f, h, j]
+        dw = np.append(dw, df)
+
+    dpx = []
+    for i in range(N):
+        dl = np.zeros((pC, pH, pW))
+        for f in range(F):
+            for h in range(0, pH - HH + 1, stride):
+                for j in range(0, pW - WW + 1, stride):
+                    dl[:, h:(h + HH), j:(j + WW)] += w[f, :, :, :] * dout[i, f, h, j]
+        dpx = np.append(dpx, dl)
+    dpx = dpx.reshape(px.shape)
+
+    for i in range(N):
+        for c in range(C):
+            dx = np.append(dx, dpx[i, c, 1:-1, 1:-1])
+
+    dw = dw.reshape(w.shape)
+    dx = dx.reshape(x.shape)
+
     return dx, dw, db
 
 
