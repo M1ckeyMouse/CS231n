@@ -640,7 +640,7 @@ def conv_backward_naive(dout, cache):
         db = np.append(db, np.sum(dout[:, f, :, :]))
 
     for f in range(F):
-        df = np.zeros((1, *w.shape[1:]))
+        df = np.zeros((1, C, HH, WW))
         for h in range(0, oH):
             dat_h = h * stride
             for j in range(0, oW):
