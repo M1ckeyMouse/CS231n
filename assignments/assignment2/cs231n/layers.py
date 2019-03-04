@@ -779,7 +779,7 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     - out: Output data, of shape (N, C, H, W)
     - cache: Values needed for the backward pass
     """
-    out, cache = None, None
+    out, cache = [], []
 
     ###########################################################################
     # TODO: Implement the forward pass for spatial batch normalization.       #
@@ -789,10 +789,13 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = x.shape
+    h = x.reshape(C, N, H * W)
 
+    for c in range(C):
+        out = np.append(out, batchnorm_forward(h[c, :, :], gamma[c], beta[c], bn_param)[0])
+        cache = np.append(cache, batchnorm_forward(h[c, :, :], gamma[c], beta[c], bn_param)[1])
+    out = out.reshape(x.shape)
     return out, cache
 
 
@@ -809,7 +812,7 @@ def spatial_batchnorm_backward(dout, cache):
     - dgamma: Gradient with respect to scale parameter, of shape (C,)
     - dbeta: Gradient with respect to shift parameter, of shape (C,)
     """
-    dx, dgamma, dbeta = None, None, None
+    dx, dgamma, dbeta = [], [], []
 
     ###########################################################################
     # TODO: Implement the backward pass for spatial batch normalization.      #
@@ -819,9 +822,15 @@ def spatial_batchnorm_backward(dout, cache):
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = dout.shape
+    dh = dout.reshape(C, N, H * W)
+
+    for c in range(C):
+        dx = np.append(dx, batchnorm_backward_alt(dh[c, :, :], cache[c])[0])
+        dgamma = np.append(dgamma, np.sum(batchnorm_backward_alt(dh[c, :, :], cache[c])[1]))
+        dbeta = np.append(dbeta, np.sum(batchnorm_backward_alt(dh[c, :, :], cache[c])[2]))
+
+    dx = dx.reshape(dout.shape)
 
     return dx, dgamma, dbeta
 
