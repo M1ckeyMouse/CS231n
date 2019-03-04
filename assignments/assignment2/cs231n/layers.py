@@ -445,11 +445,11 @@ def layernorm_backward(dout, cache):
     N, D = dout.shape
 
     # step3
-    dbeta = np.sum(dout, axis=0)
+    dbeta = np.sum(dout, axis=1)
     dgammax = dout  # not necessary, but more understandable
 
     # step2
-    dgamma = np.sum(dout * xhat, axis=0)
+    dgamma = np.sum(dout * xhat, axis=1)
     dxhat = dout * gamma
 
     xhat = xhat.T
@@ -795,6 +795,7 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     for c in range(C):
         out = np.append(out, batchnorm_forward(h[c, :, :], gamma[c], beta[c], bn_param)[0])
         cache = np.append(cache, batchnorm_forward(h[c, :, :], gamma[c], beta[c], bn_param)[1])
+
     out = out.reshape(x.shape)
     return out, cache
 
@@ -854,7 +855,7 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     - out: Output data, of shape (N, C, H, W)
     - cache: Values needed for the backward pass
     """
-    out, cache = None, None
+    out, cache = [], []
     eps = gn_param.get('eps', 1e-5)
     ###########################################################################
     # TODO: Implement the forward pass for spatial group normalization.       #
@@ -864,9 +865,24 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     # and layer normalization!                                                # 
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = x.shape
+    h = x.reshape(N * G, C // G, H * W)
+
+    gammas = gamma[0].reshape(G, -1)
+    betas = beta[0].reshape(G, -1)
+
+    for i in range(0, h.shape[0]):
+        out = np.append(out, layernorm_forward(h[i, :, :],
+                                               gammas[i % G].reshape(3, -1),
+                                               betas[i % G].reshape(3, -1),
+                                               gn_param)[0])
+        cache = np.append(cache, layernorm_forward(h[i, :, :],
+                                                   gammas[i % G].reshape(3, -1),
+                                                   betas[i % G].reshape(3, -1),
+                                                   gn_param)[1])
+
+    cache = np.append(cache, G)
+    out = out.reshape(x.shape)
     return out, cache
 
 
@@ -883,16 +899,28 @@ def spatial_groupnorm_backward(dout, cache):
     - dgamma: Gradient with respect to scale parameter, of shape (C,)
     - dbeta: Gradient with respect to shift parameter, of shape (C,)
     """
-    dx, dgamma, dbeta = None, None, None
+    dx, dgamma, dbeta = [], [], []
 
     ###########################################################################
     # TODO: Implement the backward pass for spatial group normalization.      #
     # This will be extremely similar to the layer norm implementation.        #
     ###########################################################################
     pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    N, C, H, W = dout.shape
+    G = cache[-1]
+    cache = cache[:-1]
+
+    dh = dout.reshape(N * G, C // G, H * W)
+
+    for i in range(0, dh.shape[0]):
+        dx = np.append(dx, layernorm_backward(dh[i, :, :], cache[i])[0])
+        dgamma = np.append(dgamma, layernorm_backward(dh[i, :, :], cache[i])[1])
+        dbeta = np.append(dbeta, layernorm_backward(dh[i, :, :], cache[i])[2])
+
+    dx = dx.reshape(dout.shape)
+    dgamma = np.sum(dgamma.reshape(2, -1), axis=0).reshape((1, C, 1, 1))
+    dbeta = np.sum(dbeta.reshape(2, -1), axis=0).reshape((1, C, 1, 1))
+
     return dx, dgamma, dbeta
 
 
